@@ -4,3 +4,5 @@ __pycache__/
 *.pth
 temp_images/
 .idea/
+.vscode/
+src/__pycache__

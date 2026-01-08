@@ -11,9 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from tqdm import tqdm
-
-
+from src.utils import get_mean_and_std
 
 def download_dataset():
     """Download the pokemon dataaset if it doesn't exist."""
@@ -138,7 +136,7 @@ def save_dataset_locally(dataset):
     dataset.save_to_disk(folder_path)
     print("Save complete!")
 
-def split_dataset(data_path="../data/pokemon_clean"):
+def split_dataset(data_path="./data/pokemon_clean"):
     # Load the master sanitized dataset
     ds = load_from_disk(data_path)
     
@@ -157,59 +155,6 @@ def split_dataset(data_path="../data/pokemon_clean"):
     print(f"Final Counts -> Train: {len(final_ds['train'])}, Val: {len(final_ds['validation'])}, Test: {len(final_ds['test'])}")
     return final_ds
 
-def get_mean_and_std(dataset):
-    """Calculates the mean and std of PokemonDataset
-    Args:
-        dataset: An instance of the PokemonDataset
-    Returns:
-        a float tuple[mean, std]
-    """
-    from src.dataset import PokemonDataset
-    
-   
-    
-    # Resize and ToTensor so we can calc the mean and std
-    temp_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor()
-    ])
-
-    # Create a temporary dataset instance
-    dataset = PokemonDataset(dataset_split=dataset,transform=temp_transform)
-    
-    # Create a temporary loader without any normalization
-    # We use a batch size to speed up the math
-    loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=0)
-    
-    print(f"Calculating stats for {len(dataset)} images...")
-    
-    cnt = 0
-    fst_moment = torch.empty(3)
-    snd_moment = torch.empty(3)
-
-    for images, _ in tqdm(loader):
-        # images shape: [batch_size, 3, height, width]
-        b, c, h, w = images.shape
-        nb_pixels = b * h * w
-        
-        # Sum of pixel values per channel
-        fst_moment = (fst_moment * cnt + torch.sum(images, dim=[0, 2, 3])) / (cnt + nb_pixels)
-        
-        # Sum of square of pixel values per channel
-        snd_moment = (snd_moment * cnt + torch.sum(images**2, dim=[0, 2, 3])) / (cnt + nb_pixels)
-        
-        cnt += nb_pixels
-
-    # Standard Deviation formula: sqrt(E[X^2] - (E[X])^2)
-    mean = fst_moment
-    std = torch.sqrt(snd_moment - fst_moment**2)
-
-    print(f"\nCalculation Complete:")
-    print(f"Mean: {mean.tolist()}")
-    print(f"Std:  {std.tolist()}")
-    
-    return mean, std
-    
 def get_train_test_transforms(mean, std):
         """
         Creates and returns a composition of image transformations for data augmentation
@@ -254,7 +199,7 @@ def get_train_test_transforms(mean, std):
         
         return transforms_train, transforms_test
 
-def create_dataloaders(batch_size=64):
+def create_dataloaders(data_path, batch_size=64, ):
     """ Creates train, val, and test DataLoaders 
 
     Args:
@@ -266,7 +211,7 @@ def create_dataloaders(batch_size=64):
     """
     from src.dataset import PokemonDataset
     # Saved dataset is unsplit, so must split it first
-    dataset = split_dataset()
+    dataset = split_dataset(data_path)
  
     # Calculate the stats using this un-normalized data
     train_mean, train_std = get_mean_and_std(dataset=dataset["train"])
