@@ -1,0 +1,16 @@
+{
+  "os": "macOS-15.6.1-arm64-arm-64bit",
+  "python": "CPython 3.11.13",
+  "startedAt": "2026-01-08T21:31:40.883977Z",
+  "program": "/Users/yassinkina/Desktop/Github/portfolio/pokemon/train.py",
+  "codePath": "train.py",
+  "codePathLocal": "train.py",
+  "git": {
+    "commit": "024a6d5ffb853a1c8a61d1594f8e2354dde85172"
+  },
+  "email": "yassinkina@gmail.com",
+  "root": "/Users/yassinkina/Desktop/Github/portfolio/pokemon",
+  "host": "Yassins-MacBook-Air.local",
+  "executable": "/opt/miniconda3/envs/nlp/bin/python",
+  "writerId": "5gj4gr01nnrxnidcm01eq8xywobloztl"
+}

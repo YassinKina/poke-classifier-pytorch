@@ -1,0 +1,54 @@
+_wandb:
+    value:
+        cli_version: 0.23.1
+        e:
+            5gj4gr01nnrxnidcm01eq8xywobloztl:
+                codePath: train.py
+                codePathLocal: train.py
+                email: yassinkina@gmail.com
+                executable: /opt/miniconda3/envs/nlp/bin/python
+                git:
+                    commit: 024a6d5ffb853a1c8a61d1594f8e2354dde85172
+                host: Yassins-MacBook-Air.local
+                os: macOS-15.6.1-arm64-arm-64bit
+                program: /Users/yassinkina/Desktop/Github/portfolio/pokemon/train.py
+                python: CPython 3.11.13
+                root: /Users/yassinkina/Desktop/Github/portfolio/pokemon
+                startedAt: "2026-01-08T21:31:40.883977Z"
+                writerId: 5gj4gr01nnrxnidcm01eq8xywobloztl
+        m: []
+        python_version: 3.11.13
+        t:
+            "1":
+                - 1
+                - 5
+                - 11
+                - 41
+                - 49
+                - 51
+                - 53
+                - 105
+            "2":
+                - 1
+                - 5
+                - 11
+                - 41
+                - 49
+                - 51
+                - 53
+                - 105
+            "3":
+                - 16
+            "4": 3.11.13
+            "5": 0.23.1
+            "6": 4.56.1
+            "12": 0.23.1
+            "13": darwin-arm64
+architecture:
+    value: CNN
+dataset:
+    value: fcakyon/pokemon-classification
+epochs:
+    value: 3
+learning_rate:
+    value: 0.0003

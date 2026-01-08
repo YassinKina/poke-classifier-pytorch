@@ -1,0 +1,71 @@
+_wandb:
+    value:
+        cli_version: 0.23.1
+        e:
+            yped0wgjtoibjajathd8ilerzcip89cn:
+                apple:
+                    ecpuCores: 4
+                    gpuCores: 10
+                    memoryGb: 24
+                    name: Apple M3
+                    pcpuCores: 4
+                    ramTotalBytes: "25769803776"
+                    swapTotalBytes: "21474836480"
+                codePath: train.py
+                codePathLocal: train.py
+                cpu_count: 8
+                cpu_count_logical: 8
+                disk:
+                    /:
+                        total: "494384795648"
+                        used: "166722834432"
+                email: yassinkina@gmail.com
+                executable: /opt/miniconda3/envs/nlp/bin/python
+                git:
+                    commit: 024a6d5ffb853a1c8a61d1594f8e2354dde85172
+                host: Yassins-MacBook-Air.local
+                memory:
+                    total: "25769803776"
+                os: macOS-15.6.1-arm64-arm-64bit
+                program: /Users/yassinkina/Desktop/Github/portfolio/pokemon/train.py
+                python: CPython 3.11.13
+                root: /Users/yassinkina/Desktop/Github/portfolio/pokemon
+                startedAt: "2026-01-08T21:33:19.178758Z"
+                writerId: yped0wgjtoibjajathd8ilerzcip89cn
+        m: []
+        python_version: 3.11.13
+        t:
+            "1":
+                - 1
+                - 5
+                - 11
+                - 41
+                - 49
+                - 51
+                - 53
+                - 105
+            "2":
+                - 1
+                - 5
+                - 11
+                - 41
+                - 49
+                - 51
+                - 53
+                - 105
+            "3":
+                - 2
+                - 16
+            "4": 3.11.13
+            "5": 0.23.1
+            "6": 4.56.1
+            "12": 0.23.1
+            "13": darwin-arm64
+architecture:
+    value: CNN
+dataset:
+    value: fcakyon/pokemon-classification
+epochs:
+    value: 3
+learning_rate:
+    value: 0.0003

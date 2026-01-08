@@ -1,0 +1,7 @@
+Training - Current Epoch: 3: 100%|██████████| 3/3 [02:07<00:00, 42.40s/it]  
+Training - Current Batch: 73: 100%|██████████| 73/73 [00:38<00:00,  1.88it/s]
+Epoch 1 | Train Loss: 5.3796 Acc: 1.26% | Val Loss: 4.9072 Acc: 1.88%
+Epoch 2 | Train Loss: 4.7866 Acc: 2.63% | Val Loss: 4.5955 Acc: 4.11%
+Epoch 3 | Train Loss: 4.5133 Acc: 4.67% | Val Loss: 4.3028 Acc: 5.48%
+
+Training complete!

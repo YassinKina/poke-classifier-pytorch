@@ -33,7 +33,7 @@ class CNN(nn.Module):
             block = nn.Sequential(
                 nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=padding),
                 nn.BatchNorm2d(num_features=out_channels),
-                nn.ReLU(),
+                nn.ReLU(inplace=True),
                 nn.MaxPool2d(kernel_size=2, stride=2)
             )
             
@@ -65,30 +65,7 @@ class CNN(nn.Module):
             nn.Dropout(p=dropout_rate),
             nn.Linear(fc_size, num_classes)
         )
-    
-       
-    def _create_classifer(self, flattened_size, device):
-        """
-        Dynamically creates and initializes the classifier part of the network.
-
-        This helper method is called during the first forward pass to build the
-        fully connected layers based on the feature map size from the
-        convolutional base.
-
-        Args:
-            flattened_size: The number of input features for the first linear
-                            layer, determined from the flattened feature map.
-            device: The device to which the new classifier layers should be moved.
-        """
-        self.classifier = nn.Sequential(
-            nn.Dropout(p=self.dropout_rate),
-            nn.Linear(in_features=flattened_size, out_features=self.fc_size),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=self.dropout_rate),
-            nn.Linear(in_features=self.fc_size, out_features=self.num_classes)
-        ).to(device)
-        
-            
+      
     def forward(self, x):
         """
         Defines the forward pass of the model.

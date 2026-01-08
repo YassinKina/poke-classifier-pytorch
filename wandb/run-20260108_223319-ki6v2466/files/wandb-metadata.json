@@ -1,0 +1,36 @@
+{
+  "os": "macOS-15.6.1-arm64-arm-64bit",
+  "python": "CPython 3.11.13",
+  "startedAt": "2026-01-08T21:33:19.178758Z",
+  "program": "/Users/yassinkina/Desktop/Github/portfolio/pokemon/train.py",
+  "codePath": "train.py",
+  "codePathLocal": "train.py",
+  "git": {
+    "commit": "024a6d5ffb853a1c8a61d1594f8e2354dde85172"
+  },
+  "email": "yassinkina@gmail.com",
+  "root": "/Users/yassinkina/Desktop/Github/portfolio/pokemon",
+  "host": "Yassins-MacBook-Air.local",
+  "executable": "/opt/miniconda3/envs/nlp/bin/python",
+  "cpu_count": 8,
+  "cpu_count_logical": 8,
+  "disk": {
+    "/": {
+      "total": "494384795648",
+      "used": "166722834432"
+    }
+  },
+  "memory": {
+    "total": "25769803776"
+  },
+  "apple": {
+    "name": "Apple M3",
+    "ecpuCores": 4,
+    "pcpuCores": 4,
+    "gpuCores": 10,
+    "memoryGb": 24,
+    "swapTotalBytes": "21474836480",
+    "ramTotalBytes": "25769803776"
+  },
+  "writerId": "yped0wgjtoibjajathd8ilerzcip89cn"
+}

@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 import math
 
+
 def get_mean_and_std(dataset):  
     
     """Calculates the mean and std of PokemonDataset
@@ -57,6 +58,13 @@ def get_mean_and_std(dataset):
     print(f"Std:  {std.tolist()}")
     
     return mean, std
+
+def get_best_val_accuracy():
+    """Provides the best val_accuracy achieved in the model the best performing model that is saved
+        Returns:
+            best_val_acc (float)
+    """
+    return 0.5685
 
 
 class NestedProgressBar:

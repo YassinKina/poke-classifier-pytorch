@@ -1,4 +1,7 @@
-from src.utils import NestedProgressBar
+from src.utils import NestedProgressBar, get_best_val_accuracy
+import torch
+import os
+import wandb
 
 def train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar):
     """Trains the model for a single epoch.
@@ -54,8 +57,29 @@ def train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar):
     
     return epoch_loss, epoch_acc
        
+
+def validate_epoch(model, val_dataloader, loss_func, device):
+    model.eval() # Set model to evaluation mode
+    
+    running_loss = 0.0
+    correct = 0
+    total = 0
+    
+    with torch.no_grad(): 
+        for inputs, labels in val_dataloader:
+            inputs, labels = inputs.to(device), labels.to(device)
             
-def train_model(model, optimizer, loss_func, train_dataloader, device, n_epochs):
+            outputs = model(inputs)
+            loss = loss_func(outputs, labels)
+            
+            running_loss += loss.item() * inputs.size(0)
+            _, predicted = outputs.max(1)
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
+            
+    return running_loss / total, correct / total            
+
+def train_model(model, optimizer, loss_func, train_dataloader,val_dataloader, device, n_epochs, wandb_run=None):
     """Runs the training process for the model over multiple epochs.
 
     This function sets up a progress bar and manages the training loop,
@@ -74,23 +98,67 @@ def train_model(model, optimizer, loss_func, train_dataloader, device, n_epochs)
     pbar = NestedProgressBar(
         total_epochs=n_epochs,
         total_batches=len(train_dataloader),
-        epoch_message_freq=5,
+        epoch_message_freq=1,
         mode="train",
         use_notebook=False
     )
+    # Later update function logic
+    best_val_acc = get_best_val_accuracy()
     
     # Loop through all epochs
     for epoch in range(n_epochs):
-        #Update the outer progress bar for the current epoch
         pbar.update_epoch(epoch + 1)
-        # Train model for one epoch
-        train_loss, _ = train_epoch(
-            model, train_dataloader, optimizer, loss_func, device, pbar
-        )
-        # Log the training loss for the current epoch at a set frequency
-        pbar.maybe_log_epoch(
-            epoch + 1,
-            message=f"Epoch {epoch+1} - Train Loss: {train_loss:.4f}",
-        )
+        
+        # 1. Train
+        train_loss, train_acc = train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar)
+        
+        # 2. Validate
+        val_loss, val_acc = validate_epoch(model, val_dataloader, loss_func, device)
+        
+        
+        # 3. Log results
+        status_msg = f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} Acc: {train_acc:.2%} | Val Loss: {val_loss:.4f} Acc: {val_acc:.2%}"
+        pbar.maybe_log_epoch(epoch + 1, message=status_msg)
+        
+        # 4. Log to wandb
+        if wandb_run is not None:
+            wandb_run.log({
+                "epoch": epoch + 1,
+                "train/loss": train_loss,
+                "train/acc": train_acc,
+                "val/loss": val_loss,
+                "val/acc": val_acc,
+                # "val/acc_top5": val_acc5
+            })
+        
+        # 4. Save Best Model
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            save_path = f"models/pokemon_cnn_best.pth"
+            os.makedirs("models", exist_ok=True)
+            torch.save(model.state_dict(), save_path)
+            print("New best model saved successfully")
+        
+        
     # Close the progress bar and print a final completion message
     pbar.close("Training complete!\n")
+    
+    if wandb_run is not None:
+        wandb_run.finish()
+    
+def init_wandb_run(learning_rate, architecture, dataset, num_epochs):
+        # Start a new wandb run to track this script.
+    run = wandb.init(
+        # Set the wandb entity where your project will be logged (generally your team name).
+        entity="yassinbkina",
+        # Set the wandb project where this run will be logged.
+        project="pokemon-classification",
+        # Track hyperparameters and run metadata.
+        config={
+            "learning_rate": learning_rate,
+            "architecture": architecture,
+            "dataset": dataset,
+            "epochs": num_epochs,
+        },
+    )
+    return run
