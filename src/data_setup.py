@@ -7,35 +7,43 @@ import numpy as np
 import random
 from collections import defaultdict
 from imagededup.methods import CNN
-from collections import defaultdict
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from src.utils import get_mean_and_std
 import glob
+from typing import Optional, Tuple, List, Union
 
-def download_dataset(raw_path,):
-    """Download the pokemon dataaset if it doesn't exist."""
+def download_dataset(raw_path: str) -> None:
+    """
+    Downloads the Pokémon dataset from Hugging Face if it does not already exist.
 
-   
+    Args:
+        raw_path (str): The local directory path where the dataset should be stored.
+    """
     os.makedirs(raw_path, exist_ok=True)
-
     print("Downloading pokemon dataset...")
-
     # Download dataset from HF
     ds = load_dataset("fcakyon/pokemon-classification", cache_dir=raw_path, revision="refs/convert/parquet")
-
     return
 
-def load_local_data():
+def load_local_data() -> DatasetDict:
+    """
+    Locates and loads local .arrow files into a Hugging Face DatasetDict.
+
+    Returns:
+        DatasetDict: The loaded dataset containing train, validation, and test splits.
+    
+    Raises:
+        FileNotFoundError: If no .arrow files are found in the expected directory.
+    """
     # Use the root of your data directory
     base_search_path = "./data/fcakyon___pokemon-classification"
     
     # Look for any .arrow files recursively within that folder
-    # This ignores the 'c07895...' hash folder level entirely
     arrow_files = glob.glob(os.path.join(base_search_path, "**/*.arrow"), recursive=True)
     
-    # Map them to splits
+    # Map .arrow files into splits
     data_files = {}
     for f in arrow_files:
         if "train" in f: data_files["train"] = f
@@ -48,7 +56,15 @@ def load_local_data():
     print(f"Found local data files: {list(data_files.keys())}")
     return load_dataset("arrow", data_files=data_files)
 
-def view_dataset(ds, split="train", idx=None):
+def view_dataset(ds: DatasetDict, split: str = "train", idx: Optional[int] = None) -> None:
+    """
+    Visualizes a single sample from the dataset with its associated Pokémon name and ID.
+
+    Args:
+        ds (DatasetDict): The dataset to visualize.
+        split (str): The dataset split to sample from (e.g., 'train').
+        idx (Optional[int]): Specific index to view; if None, a random index is chosen.
+    """
     # Get the total number of images in the split
     dataset_size = len(ds[split])
 
@@ -74,11 +90,20 @@ def view_dataset(ds, split="train", idx=None):
     plt.axis('off')
     plt.show()
 
-def sanitize_dataset(save_path):
-    # 1. Load the existing arrow files (which currently have duplicates)
+def sanitize_dataset(save_path: str) -> DatasetDict:
+    """
+    Performs global deduplication across all splits and re-stratifies the data into 80/10/10 splits.
+
+    Args:
+        save_path (str): The directory path to save the cleaned DatasetDict.
+
+    Returns:
+        DatasetDict: The deduplicated and re-split dataset.
+    """
+    #  Load the existing arrow files (which currently have duplicates)
     ds_full_dict = load_local_data()
     
-    # 2. Flatten into one single Dataset
+    # Flatten into one single Dataset
     print("Combining all splits for global deduplication...")
     combined_ds = concatenate_datasets([
         ds_full_dict["train"], 
@@ -86,18 +111,18 @@ def sanitize_dataset(save_path):
         ds_full_dict["test"]
     ])
     
-    # 3. Export images to one temp folder for the CNN
+    # Export images to one temp folder for the CNN
     temp_dir = "./data/temp_images_global"
     os.makedirs(temp_dir, exist_ok=True)
     
     for idx, example in enumerate(combined_ds):
         example['image'].save(f"{temp_dir}/{idx}.jpg")
 
-    # 4. Use CNN to find duplicates globally
+    # Use CNN to find duplicates globally
     cnn = CNN() 
     duplicates = cnn.find_duplicates(image_dir=temp_dir, min_similarity_threshold=0.9)
 
-    # 5. Identify unique indices
+    # Identify unique indices
     seen_indices = set()
     unique_indices = []
     for img_name, dupe_list in sorted(duplicates.items(), key=lambda x: int(x[0].split('.')[0])):
@@ -111,11 +136,8 @@ def sanitize_dataset(save_path):
     unique_ds = combined_ds.select(unique_indices)
     print(f"Global deduplication complete: {len(unique_ds)} unique images remaining.")
 
-    # 6. Re-split into 80/10/10 (Stratified)
-    # First split: Train (80%) and Temp (20%)
+    #  Re-split into 80/10/10 (Stratified)
     train_temp = unique_ds.train_test_split(test_size=0.2, seed=42, stratify_by_column="labels")
-    
-    # Second split: Divide Temp into Val (50% of temp) and Test (50% of temp)
     val_test = train_temp["test"].train_test_split(test_size=0.5, seed=42, stratify_by_column="labels")
 
     final_ds = DatasetDict({
@@ -123,14 +145,18 @@ def sanitize_dataset(save_path):
         "validation": val_test["train"],
         "test": val_test["test"]
     })
-
+    # Saved newly split dataset locally
     final_ds.save_to_disk(save_path)
     print(f"Cleaned and re-stratified dataset saved at {save_path}")
     return final_ds
 
+def save_dataset_locally(dataset: DatasetDict) -> None:
+    """
+    Saves a DatasetDict to a project-relative 'data/pokemon_clean' directory.
 
-def save_dataset_locally(dataset):
-    
+    Args:
+        dataset (DatasetDict): The dataset object to be saved.
+    """
     # Get the path of the current file (data_setup.py)
     current_file = Path(__file__).resolve()
 
@@ -148,7 +174,16 @@ def save_dataset_locally(dataset):
     dataset.save_to_disk(folder_path)
     print("Save complete!")
 
-def split_dataset(cleaned_path="data/pokemon_clean"):
+def split_dataset(cleaned_path: str = "data/pokemon_clean") -> DatasetDict:
+    """
+    Loads a cleaned dataset if available; otherwise, handles downloading and sanitization.
+
+    Args:
+        cleaned_path (str): Path to the saved cleaned dataset.
+
+    Returns:
+        DatasetDict: The master sanitized dataset containing all splits.
+    """
     ds =  None
     raw_path = "data/fcakyon___pokemon-classification"
     # Create cleaned dataset with balanced labels representation
@@ -168,66 +203,56 @@ def split_dataset(cleaned_path="data/pokemon_clean"):
     print(f"Final Counts -> Train: {len(ds['train'])}, Val: {len(ds['validation'])}, Test: {len(ds['test'])}")
     return ds
     
-  
-def get_train_test_transforms(mean, std):
-        """
-        Creates and returns a composition of image transformations for data augmentation
-        and preprocessing.
-
-        Args:
-            mean (list or tuple): A sequence of mean values for each channel.
-            std (list or tuple): A sequence of standard deviation values for each channel.
-
-        Returns:
-            torchvision.transforms.Compose: A composed pipeline of train transformations.
-            torchvision.transforms.Compose: A composed pipeline of test transformations without augmentations
-            
-        """
-        
-        base_transforms = [
-            # Resize the input image to 256x256 pixels.
-            transforms.Resize((256, 256)),
-            # Crop the center 224x224 pixels of the image.
-            transforms.CenterCrop(224),
-             
-        ]
-        
-        augmentations_transforms = [
-      
-            transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
-            
-            transforms.RandomHorizontalFlip(p=0.5),
-            
-            transforms.RandomRotation(degrees=20),
-            
-            # Add contrast and saturation to ColorJitter
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-            
-            # Randomly turn the image grayscale (5% of the time)
-            transforms.RandomGrayscale(p=0.05),
-        ]
-        
-        main_transforms = [
-            # Convert the image to a PyTorch tensor.
-            transforms.ToTensor(),
-            # Normalize the tensor
-            transforms.Normalize(mean=mean, std=std),
-        ]
-        # base + augmented + main
-        transforms_train = transforms.Compose(base_transforms +augmentations_transforms + main_transforms)
-        transforms_test = transforms.Compose(base_transforms + main_transforms)
-        
-        return transforms_train, transforms_test
-
-def create_dataloaders(clean_data_path, batch_size=64, ):
-    """ Creates train, val, and test DataLoaders 
+def get_train_test_transforms(mean: Union[List[float], Tuple[float, ...]], std: Union[List[float], Tuple[float, ...]]) -> Tuple[transforms.Compose, transforms.Compose]:
+    """
+    Defines the transformation pipelines for training (with augmentation) and testing.
 
     Args:
-        data_dir (_type_): _description_
-        batch_size (int, optional): _description_. Defaults to 32.
+        mean (Union[List[float], Tuple[float, ...]]): Normalization means for RGB channels.
+        std (Union[List[float], Tuple[float, ...]]): Normalization standard deviations for RGB channels.
 
     Returns:
-        _type_: _description_
+        Tuple[transforms.Compose, transforms.Compose]: A tuple containing (train_transforms, test_transforms).
+    """
+    base_transforms = [
+        # Resize the input image to 256x256 pixels.
+        transforms.Resize((256, 256)),
+        # Crop the center 224x224 pixels of the image.
+        transforms.CenterCrop(224),
+    ]
+    
+    augmentations_transforms = [
+        transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(degrees=20),
+        # Add contrast and saturation to ColorJitter
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+        # Randomly turn the image grayscale (5% of the time)
+        transforms.RandomGrayscale(p=0.05),
+    ]
+    
+    main_transforms = [
+        # Convert the image to a PyTorch tensor.
+        transforms.ToTensor(),
+        # Normalize the tensor
+        transforms.Normalize(mean=mean, std=std),
+    ]
+    # base + augmented + main
+    transforms_train = transforms.Compose(base_transforms + augmentations_transforms + main_transforms)
+    transforms_test = transforms.Compose(base_transforms + main_transforms)
+    
+    return transforms_train, transforms_test
+
+def create_dataloaders(clean_data_path: str, batch_size: int = 64) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    """
+    Initializes PyTorch DataLoaders for the train, validation, and test splits.
+
+    Args:
+        clean_data_path (str): Local path to the sanitized dataset.
+        batch_size (int): Number of samples per batch.
+
+    Returns:
+        Tuple[DataLoader, DataLoader, DataLoader]: (train_loader, val_loader, test_loader).
     """
     from src.dataset import PokemonDataset
     # Saved dataset is unsplit, so must split it first
@@ -251,38 +276,26 @@ def create_dataloaders(clean_data_path, batch_size=64, ):
 
     return train_loader, val_loader, test_loader
     
-def verify_dataloaders(train_dl):
-    """After running create_dataloaders, check that the dataloader has the correct data
+def verify_dataloaders(train_dl: DataLoader) -> None:
+    """
+    Prints diagnostic information about the first batch of a DataLoader to verify integrity.
 
     Args:
-        train_dl (_type_): _description_
+        train_dl (DataLoader): The DataLoader to inspect.
     """
-     # Grab the first batch from the train_loader
+    # Grab the first batch from the train_loader
     images, labels = next(iter(train_dl))
 
     print(f"Batch Image Shape: {images.shape}") 
-    # Expected: [batch_size, 3, 224, 224] -> e.g., [32, 3, 224, 224]
-
     print(f"Batch Label Shape: {labels.shape}")
-    # Expected: [batch_size] -> e.g., [32]
-
     print(f"Label Data Type: {labels.dtype}")
-    # Expected: torch.int64 (LongTensor)
-
     print(f"Image Pixel Range: Min={images.min():.2f}, Max={images.max():.2f}")
-    # If normalized, you'll see negative numbers and values around 0-2.
 
-
-def test_main():
-    
-
-    download_dataset()
+def test_main() -> None:
+    """
+    Orchestrates a basic end-to-end test of the data downloading and loading pipeline.
+    """
+    download_dataset("data/fcakyon___pokemon-classification")
     ds = load_local_data()
     print(ds)
-
     view_dataset(ds)
-
-
-
-
-

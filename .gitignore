@@ -18,11 +18,13 @@ lightning_logs/
 # Large Dataset Files 
 data/
 outputs/
+temp_images/
+temp_images_global/
 *.zip
 *.tar.gz
 *.csv
 
-# Model Weights (save these to a cloud drive/W&B instead)
+# Model Weights 
 models/*.pth
 models/*.pt
 models/*.onnx

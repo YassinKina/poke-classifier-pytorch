@@ -6,6 +6,7 @@ import math
 import torch
 import numpy as np
 import random
+import os
 
 
 def get_mean_and_std(dataset):  
@@ -17,9 +18,7 @@ def get_mean_and_std(dataset):
         a float tuple[mean, std]
     """
     from src.dataset import PokemonDataset
-    
-   
-    
+        
     # Resize and ToTensor so we can calc the mean and std
     temp_transform = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -62,12 +61,31 @@ def get_mean_and_std(dataset):
     
     return mean, std
 
-def get_best_val_accuracy():
-    """Provides the best val_accuracy achieved in the model the best performing model that is saved
-        Returns:
-            best_val_acc (float)
+def get_best_val_accuracy(model_path: str = "models/pokemon_cnn_best.pth") -> float:
     """
-    return 0.5685
+    Loads the best saved model checkpoint and retrieves the recorded accuracy.
+    
+    Args:
+        model_path (str): Path to the saved .pth checkpoint.
+        
+    Returns:
+        float: The best validation accuracy found, or 0.0 if no model exists.
+    """
+    if os.path.exists(model_path):
+        try:
+            # map_location ensures it loads even if saved on a different device
+            checkpoint = torch.load(model_path, map_location="cpu", weights_only=False)
+            
+            # If you saved it as a dict, return the 'accuracy' key
+            if isinstance(checkpoint, dict) and 'accuracy' in checkpoint:
+                return checkpoint['accuracy']
+            
+            # Fallback for old models that only saved the state_dict
+            return 0.0 
+        except Exception as e:
+            print(f"Warning: Could not read accuracy from checkpoint: {e}")
+            return 0.0
+    return 0.0
 
 def flatten_config(raw_dict, parent_key='', sep='/'):
     flat_config = dict()
@@ -84,9 +102,12 @@ def flatten_config(raw_dict, parent_key='', sep='/'):
     return flat_config
 
 
-
-
 def set_seed(seed=42):
+    """Set constant random see for all training
+
+    Args:
+        seed (int, optional): Random seed that fefaults to 42.
+    """
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed) # safe to call even on Mac
     np.random.seed(seed)

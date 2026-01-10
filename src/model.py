@@ -1,25 +1,40 @@
 import torch.nn as nn
 import torch
-class CNN(nn.Module):
-    """A flexible CNN with a dynamically created classifer
+from typing import List, Tuple
 
+class DynamicCNN(nn.Module):
     """
-    def __init__(self, n_layers, n_filters, kernel_sizes, dropout_rate, fc_size, num_classes, input_shape=(3, 224, 224)):
+    A flexible Convolutional Neural Network with a dynamically calculated classifier.
+
+    This model constructs a feature extractor based on specified layer counts and 
+    filter sizes, then automatically determines the required input size for the 
+    fully connected classifier based on the resulting feature map dimensions.
+    """
+    def __init__(
+        self, 
+        n_layers: int, 
+        n_filters: List[int], 
+        kernel_sizes: List[int], 
+        dropout_rate: float, 
+        fc_size: int, 
+        num_classes: int, 
+        input_shape: Tuple[int, int, int] = (3, 224, 224)
+    ):
         """
-        Initializes the feature extraction part of the CNN.
+        Initializes the DynamicCNN architecture with dynamic feature extraction and classification heads.
 
         Args:
-            n_layers: The number of convolutional blocks to create.
-            n_filters: A list of integers specifying the number of output
-                       filters for each convolutional block.
-            kernel_sizes: A list of integers specifying the kernel size for
-                          each convolutional layer.
-            dropout_rate: The dropout probability to be used in the classifier.
-            fc_size: The number of neurons in the hidden fully connected layer.
+            n_layers (int): The number of convolutional blocks to create.
+            n_filters (List[int]): Number of output filters for each convolutional block.
+            kernel_sizes (List[int]): Kernel size for each convolutional layer.
+            dropout_rate (float): The dropout probability for the classifier layers.
+            fc_size (int): The number of neurons in the hidden fully connected layer.
+            num_classes (int): The number of output classes (e.g., 150 for Pokémon).
+            input_shape (Tuple[int, int, int]): The (RGB, H, W) shape of input images.
         """
-        super(CNN, self).__init__()
+        super(DynamicCNN, self).__init__()
         
-        # Initialize convulational blocks
+        # Initialize convolutional blocks
         blocks = []
         in_channels = 3 # RGB channels
         
@@ -49,15 +64,13 @@ class CNN(nn.Module):
         self.fc_size = fc_size
         self.num_classes = num_classes
         
-        
         # Calc flattened size dynamically
         with torch.no_grad():
             # Create a fake image and pass it through the features only
             dummy_input = torch.zeros(1, *input_shape)
             dummy_output = self.features(dummy_input)
-            flattened_size = dummy_output.numel() 
+            flattened_size = int(dummy_output.numel())
        
-
         self.classifier = nn.Sequential(
             nn.Dropout(p=dropout_rate),
             nn.Linear(flattened_size, fc_size),
@@ -66,23 +79,21 @@ class CNN(nn.Module):
             nn.Linear(fc_size, num_classes)
         )
       
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Defines the forward pass of the model.
+        Performs the forward pass of the model.
 
         Args:
-            x: The input tensor of shape (batch_size, channels, height, width).
+            x (torch.Tensor): Input tensor of shape (batch_size, channels, height, width).
 
         Returns:
-            The output logits from the classifier.
+            torch.Tensor: The output logits of shape (batch_size, num_classes).
         """
-        
         # Pass input through feature extraction layers
         x = self.features(x)
         
         # Flatten all dims except batch size to pass into fully connected model
         flattened = torch.flatten(x, start_dim=1)
-        flattened_size = flattened.size(dim=1)
             
-        # Pass flattened layers through classifer for final output  
+        # Pass flattened layers through classifier for final output  
         return self.classifier(flattened)

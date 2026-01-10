@@ -5,17 +5,17 @@ dataset: "fcakyon/pokemon-classification"
 
 # Training Hyperparameters
 training:
-  batch_size: 64
-  lr: 0.0003
-  epochs: 20
+  batch_size: 32
+  lr: 0.00006881758157024532
+  epochs: 50
   num_classes: 150
 
 #  Model Architecture
 model:
   n_layers: 4
   n_filters: [32, 64, 128, 256]
-  dropout_rate: 0.25
-  fc_size: 512
+  dropout_rate: 0.3448163262529962
+  fc_size: 1024
   kernel_sizes: [3, 3, 3, 3]
   architecture: "CNN"
 

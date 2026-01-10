@@ -1,43 +1,44 @@
-from src.utils import NestedProgressBar, get_best_val_accuracy
+from .utils import NestedProgressBar, get_best_val_accuracy, flatten_config
 import torch
 import os
 import wandb
 from omegaconf import OmegaConf, DictConfig
-import wandb
-from src.utils import flatten_config
 import optuna
+from torch.utils.data import DataLoader
+import numpy as np
+from typing import Tuple, Optional, Any
 
-def train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar):
-    """Trains the model for a single epoch.
+def train_epoch(model: torch.nn.Module, 
+                train_dataloader: DataLoader, 
+                optimizer: torch.optim.Optimizer, 
+                loss_func: torch.nn.modules.loss._Loss, 
+                device: torch.device, 
+                pbar: Any) -> Tuple[float, float]:
+    """
+    Trains the model for a single epoch.
 
-    This function iterates over the training dataloader, performs the forward
-    and backward passes, updates the model weights, and calculates the loss
-    and accuracy for the entire epoch.
+    Iterates over the training dataloader, performs forward and backward passes,
+    updates model weights via the optimizer, and aggregates loss and accuracy.
 
     Args:
-        model (nn.Module): The PyTorch model to be trained.
+        model (torch.nn.Module): The PyTorch model to be trained.
         train_dataloader (DataLoader): The DataLoader containing the training data.
-        optimizer (optim.Optimizer): The optimizer for updating model weights.
-        loss_fcn: The loss function used for training.
-        device: The device to perform training on.
-        pbar: A progress bar handler object to visualize training progress.
+        optimizer (torch.optim.Optimizer): The optimizer for updating model weights.
+        loss_func (torch.nn.modules.loss._Loss): The loss function used for training.
+        device (torch.device): The device (CPU/GPU/MPS) to perform training on.
+        pbar (Any): A progress bar handler object to visualize training progress.
 
     Returns:
-        tuple: A tuple containing the average loss and accuracy for the epoch.
+        Tuple[float, float]: A tuple containing the average epoch loss and accuracy.
     """
-    # Training mode
     model.train()
     
-    # Initialize metrics
     running_loss = 0.0
     correct = 0
     total = 0
     
-    # Loop through training data
     for batch_idx, (inputs, labels) in enumerate(train_dataloader):
-        # Update the batch progress bar
         pbar.update_batch(batch_idx + 1)
-        # Move inputs and labels to device
         inputs, labels = inputs.to(device), labels.to(device)
        
         optimizer.zero_grad()
@@ -46,24 +47,37 @@ def train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar):
         loss.backward()
         optimizer.step()
         
-        #Get total loss for each epoch
         running_loss += loss.item() * inputs.size(0)
-        # Get predicted pokemon with highest score
         _, predicted_class = outputs.max(1)
-        # Update total number of samples
         total += labels.size(0)
-        # Update total humber of correctlz classifed pokemon
         correct += predicted_class.eq(labels).sum().item()
         
-    # Average loss for the epoch
     epoch_loss = running_loss / total
     epoch_acc = correct / total
     
     return epoch_loss, epoch_acc
        
 
-def validate_epoch(model, val_dataloader, loss_func, device):
-    model.eval() # Set model to evaluation mode
+def validate_epoch(model: torch.nn.Module, 
+                   val_dataloader: DataLoader, 
+                   loss_func: torch.nn.modules.loss._Loss, 
+                   device: torch.device) -> Tuple[float, float]:
+    """
+    Evaluates the model on the validation dataset for a single epoch.
+
+    Performs a forward pass in evaluation mode without gradient calculations 
+    to estimate the model's performance on unseen data.
+
+    Args:
+        model (torch.nn.Module): The PyTorch model to be evaluated.
+        val_dataloader (DataLoader): The DataLoader containing validation samples.
+        loss_func (torch.nn.modules.loss._Loss): The criterion used to calculate loss.
+        device (torch.device): The hardware device for computation.
+
+    Returns:
+        Tuple[float, float]: A tuple containing average validation loss and accuracy.
+    """
+    model.eval()
     
     running_loss = 0.0
     correct = 0
@@ -78,27 +92,46 @@ def validate_epoch(model, val_dataloader, loss_func, device):
             
             running_loss += loss.item() * inputs.size(0)
             _, predicted = outputs.max(1)
+            
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
+        
+        avg_val_loss = running_loss / total
+        avg_val_accuracy = correct / total
             
-    return running_loss / total, correct / total            
+    return avg_val_loss, avg_val_accuracy    
 
-def train_model(model, optimizer, scheduler, loss_func, train_dataloader,val_dataloader, device, n_epochs, wandb_run=None, trial=None):
-    """Runs the training process for the model over multiple epochs.
+def train_model(model: torch.nn.Module, 
+                optimizer: torch.optim.Optimizer, 
+                scheduler: Any, 
+                loss_func: torch.nn.modules.loss._Loss, 
+                train_dataloader: DataLoader, 
+                val_dataloader: DataLoader, 
+                device: torch.device, 
+                n_epochs: int, 
+                wandb_run: Optional[Any] = None, 
+                trial: Optional[optuna.trial.Trial] = None) -> float:
+    """
+    Manages the full training and validation loop over multiple epochs.
 
-    This function sets up a progress bar and manages the training loop,
-    calling a helper function to handle the logic for each individual epoch.
-    It also logs progress periodically.
+    Handles epoch iteration, model checkpointing (saving the best model), 
+    learning rate scheduling, W&B logging, and Optuna pruning logic.
 
     Args:
-        model (nn.Module): The PyTorch model to be trained.
-        optimizer (optim.Optimizer): The optimizer for updating model weights.
-        loss_func: The loss function used for training.
-        train_dataloader (DataLoader): The DataLoader for the training data.
-        device: The device to perform training on.
-        n_epochs (int): The total number of epochs to train for.
+        model (torch.nn.Module): The PyTorch model to be trained.
+        optimizer (torch.optim.Optimizer): The optimizer for updating weights.
+        scheduler (Any): Learning rate scheduler (e.g., ReduceLROnPlateau).
+        loss_func (torch.nn.modules.loss._Loss): The loss function.
+        train_dataloader (DataLoader): DataLoader for training data.
+        val_dataloader (DataLoader): DataLoader for validation data.
+        device (torch.device): Device to perform training on.
+        n_epochs (int): Total number of epochs to train.
+        wandb_run (Optional[Any]): Initialized W&B run for logging.
+        trial (Optional[optuna.trial.Trial]): Optuna trial for hyperparameter optimization.
+
+    Returns:
+        float: The best validation accuracy achieved during the training process.
     """
-    # Initialize progress bar to track training
     pbar = NestedProgressBar(
         total_epochs=n_epochs,
         total_batches=len(train_dataloader),
@@ -106,28 +139,22 @@ def train_model(model, optimizer, scheduler, loss_func, train_dataloader,val_dat
         mode="train",
         use_notebook=False
     )
-    # Later update function logic
     best_val_acc = get_best_val_accuracy()
+    print("BEST VAL ACC: ", best_val_acc) # delete this after verifying
     
-    # Loop through all epochs
     for epoch in range(n_epochs):
         pbar.update_epoch(epoch + 1)
         
-        # 1. Train
         train_loss, train_acc = train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar)
-        
-        # 2. Validate
         val_loss, val_acc = validate_epoch(model, val_dataloader, loss_func, device)
-        #Update scheduler 
+        
         scheduler.step(val_loss)
         
-
-        # 3. Log results
         status_msg = f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} Acc: {train_acc:.2%} | Val Loss: {val_loss:.4f} Acc: {val_acc:.2%}"
         pbar.maybe_log_epoch(epoch + 1, message=status_msg)
         
         current_lr = optimizer.param_groups[0]['lr']
-        # 4. Log to wandb
+        
         if wandb_run is not None:
             wandb_run.log({
                 "epoch": epoch + 1,
@@ -136,54 +163,54 @@ def train_model(model, optimizer, scheduler, loss_func, train_dataloader,val_dat
                 "val/loss": val_loss,
                 "val/acc": val_acc,
                 "train/lr": current_lr
-                # "val/acc_top5": val_acc5
             })
-        
-        # 4. Save Best Model
+        # Save checkpoint if model is performing better than previously
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            save_path = f"models/pokemon_cnn_best.pth"
+            save_path = "models/pokemon_cnn_best.pth"
             os.makedirs("models", exist_ok=True)
-            torch.save(model.state_dict(), save_path)
-            print("New best model saved successfully")
             
-        # After  val_acc is calculated
-    
+            checkpoint = {
+                'state_dict': model.state_dict(),
+                'accuracy': val_acc,
+                'epoch': epoch,
+                'run_id': wandb.run.id if wandb.run else None  
+            }
+            torch.save(checkpoint, save_path)
+            
+        # Prune optuna trial if it is performing poorly    
         if trial is not None:
-            # 1. Report the current result to Optuna
             trial.report(val_acc, epoch)
-
-            # Check if the trial should be stopped
             if trial.should_prune():
                 if wandb_run is not None:
-                    wandb_run.finish(exit_code=1) # Mark it as failed/stopped in W&B
+                    wandb_run.finish(exit_code=1)
                 raise optuna.exceptions.TrialPruned()
         
-        
-    # Close the progress bar and print a final completion message
     pbar.close("Training complete!\n")
-    
     if wandb_run is not None:
         wandb_run.finish()
         
     return best_val_acc
-    
-def init_wandb_run(config: DictConfig, run_name):
-    """Initializes a wandb run with the provided hyperparameters (config)
+
+
+def init_wandb_run(config: DictConfig, run_name: str) -> Any:
+    """
+    Initializes a Weights & Biases run with flattened configuration parameters.
+
+    Converts Hydra DictConfigs to standard dictionaries and prepares the environment
+    for a stable W&B initialization, specifically optimized for macOS threading.
 
     Args:
-        cfg (DictConfig): Contains the hyperparameters for the run
-        run_name: Name of the Optuna trial
+        config (DictConfig): The Hydra configuration containing hyperparameters.
+        run_name (str): The descriptive name for the W&B run.
+
+    Returns:
+        Any: The initialized W&B run object.
     """
-    # Force W&B to use a more stable starting method for macOS
     os.environ["WANDB_START_METHOD"] = "thread"
-     # Convert Hydra DictConfig to a standard Python dict
     config_dict = OmegaConf.to_container(config, resolve=True)
-    
-    # Flatten the dict for WANDB columns so 'training.lr' becomes 'training/lr'
     flat_config = flatten_config(config_dict)
 
-    # 2. Initialize wandb
     run = wandb.init(
         entity="yassinbkina",
         project="pokemon-classification",
@@ -195,7 +222,44 @@ def init_wandb_run(config: DictConfig, run_name):
     )
     
     print("WANDB config: ", wandb.config)
-    
     return run
 
+@torch.no_grad()
+def test_model(model: torch.nn.Module, 
+               test_loader: DataLoader, 
+               device: torch.device) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Evaluates the model on the test dataset to calculate final hold-out accuracy.
+
+    Iterates through the test set once, collecting all predictions and true labels
+     to return for further analysis (e.g., confusion matrices).
+
+    Args:
+        model (torch.nn.Module): The trained model to be evaluated.
+        test_loader (DataLoader): DataLoader for the test dataset.
+        device (torch.device): Device to perform evaluation on.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: (ground_truth_labels, predicted_labels).
+    """
+    model.eval()
+    all_preds = []
+    all_labels = []
     
+    print("Starting Final Test Evaluation...")
+    for images, labels in test_loader:
+        images, labels = images.to(device), labels.to(device)
+        
+        outputs = model(images)
+        _, preds = torch.max(outputs, 1)
+        
+        all_preds.extend(preds.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy())
+    
+    all_preds = np.array(all_preds)
+    all_labels = np.array(all_labels)
+    
+    accuracy = (all_preds == all_labels).mean()
+    print(f"Final Test Accuracy: {accuracy*100:.2f}%")
+    
+    return all_labels, all_preds
