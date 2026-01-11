@@ -215,11 +215,10 @@ def get_train_test_transforms(mean: Union[List[float], Tuple[float, ...]], std: 
         Tuple[transforms.Compose, transforms.Compose]: A tuple containing (train_transforms, test_transforms).
     """
     base_transforms = [
-        # Resize the input image to 256x256 pixels.
-        transforms.Resize((256, 256)),
-        # Crop the center 224x224 pixels of the image.
+        transforms.Resize((256, 256)), 
+         # Crop the center 224x224 pixels of the image.
         transforms.CenterCrop(224),
-    ]
+        ]
     
     augmentations_transforms = [
         transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
@@ -227,7 +226,7 @@ def get_train_test_transforms(mean: Union[List[float], Tuple[float, ...]], std: 
         transforms.RandomRotation(degrees=20),
         # Add contrast and saturation to ColorJitter
         transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-        # Randomly turn the image grayscale (5% of the time)
+        # Randomly turn the image grayscale 
         transforms.RandomGrayscale(p=0.05),
     ]
     

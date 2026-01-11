@@ -62,7 +62,7 @@ col_sidebar, col_main = st.columns([1, 3])
 
 with st.sidebar:
     st.header("🧪 Quick Test")
-    sample_images = [f for f in os.listdir(SAMPLES_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg'))] if os.path.exists(SAMPLES_DIR) else []
+    sample_images = [f for f in os.listdir(SAMPLES_DIR) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', ".avif"))] if os.path.exists(SAMPLES_DIR) else []
     
     # Selecting a sample triggers on_sample_change callback
     selected_sample = st.selectbox(
@@ -76,7 +76,7 @@ with col_main:
     # Uploading a file triggers on_upload_change callback
     uploaded_file = st.file_uploader(
         "Or upload your own image...", 
-        type=["jpg", "png", "jpeg"], 
+        type=["jpg", "png", "jpeg", "webp", "avif"], 
         key=f"file_up_{st.session_state.uploader_key}",
         on_change=on_upload_change
     )

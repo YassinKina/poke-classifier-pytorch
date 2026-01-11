@@ -38,26 +38,24 @@ def objective(trial: optuna.trial.Trial, cfg: DictConfig):
     lr = trial.suggest_float("lr", cfg.hpo.lr_range[0], cfg.hpo.lr_range[1], log=True)
     weight_decay = trial.suggest_float("weight_decay", cfg.hpo.weight_decay_range[0], cfg.hpo.weight_decay_range[1], log=True)
     label_smoothing = trial.suggest_float("label_smoothing", cfg.hpo.label_smoothing_range[0], cfg.hpo.label_smoothing_range[1])
+    dropout = trial.suggest_float("dropout_rate", cfg.hpo.dropout_range[0], cfg.hpo.dropout_range[1])
+    n_layers = trial.suggest_int("n_layers", cfg.hpo.layers_range[0], cfg.hpo.layers_range[1])
+    batch_size = trial.suggest_categorical("batch_size", cfg.hpo.batch_options)
+    fc_size = trial.suggest_categorical("fc_size", cfg.hpo.fc_options)
+    scheduler_patience = trial.suggest_int("scheduler_patience", cfg.hpo.scheduler_patience_range[0], cfg.hpo.scheduler_patience_range[1])
     
-    # dropout = trial.suggest_float("dropout_rate", cfg.hpo.dropout_range[0], cfg.hpo.dropout_range[1])
-    # n_layers = trial.suggest_int("n_layers", cfg.hpo.layers_range[0], cfg.hpo.layers_range[1])
-    # batch_size = trial.suggest_categorical("batch_size", cfg.hpo.batch_options)
-    # fc_size = trial.suggest_categorical("fc_size", cfg.hpo.fc_options)
-    # scheduler_patience = trial.suggest_int("scheduler_patience", cfg.hpo.scheduler_patience_range[0], cfg.hpo.scheduler_patience_range[1])
-    
-    # Keep these hyperparams constant
-    dropout = cfg.model.dropout_rate
-    n_layers = cfg.model.n_layers
-    batch_size = cfg.training.batch_size
-    fc_size = cfg.model.fc_size
-    scheduler_patience = cfg.training.scheduler_patience
+    # -----Keep these hyperparams constant-----
+    # # dropout = cfg.model.dropout_rate
+    # n_layers = cfg.model.n_layers
+    # batch_size = cfg.training.batch_size
+    # fc_size = cfg.model.fc_size
+    # scheduler_patience = cfg.training.scheduler_patience
     
  
     # Filters and n_layers must be equal in len
     base_filters = list(cfg.model.n_filters) # This is [32, 64, 128, 256]
     # if n_layers is 2, active_filters becomes [32, 64]
     active_filters = base_filters[:n_layers]
-    # 
     active_kernels = cfg.model.kernel_sizes[:n_layers]
     
     # 2. Update a local copy of the config

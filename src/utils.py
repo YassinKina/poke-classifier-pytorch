@@ -9,6 +9,8 @@ import os
 import wandb
 from typing import Tuple, Any, Optional
 from omegaconf import DictConfig, OmegaConf
+from torchview import draw_graph
+from src import DynamicCNN
 
 POKEMON_MEAN = torch.tensor([0.5863186717033386, 0.5674829483032227, 0.5336665511131287])
 POKEMON_STD = torch.tensor([0.34640103578567505, 0.33123084902763367, 0.34212544560432434])
@@ -123,7 +125,6 @@ def flatten_config(raw_dict, parent_key='', sep='/'):
             
     return flat_config
 
-
 def set_seed(seed=42):
     """Set constant random see for all training
 
@@ -184,7 +185,7 @@ def init_wandb_run(config: DictConfig, run_name: str) -> Any:
         project="pokemon-classification",
         config=flat_config, 
         name=run_name,
-        group="optuna_hpo",
+        group="GAP_hpo",
         settings=wandb.Settings(start_method="thread"), 
         reinit=True
     )
@@ -204,6 +205,10 @@ def get_list_labels():
     "Ditto", "Victreebel", "Omanyte", "Horsea", "Pikachu", "Blastoise", "Venomoth", "Charizard", "Seadra", "Muk", "Spearow", "Bulbasaur", "Bellsprout", "Electrode", "Gloom", "Poliwhirl", "Flareon",
     "Seaking", "Hypno", "Wartortle", "Mankey", "Tentacool", "Exeggcute", "Meowth"]
     return labels
+
+
+    
+    
 class NestedProgressBar:
     """A handler for nested tqdm progress bars for training and evaluation loops.
 

@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch
 from typing import List, Tuple
+from torchview import draw_graph
+import os
 
 class DynamicCNN(nn.Module):
     """
@@ -33,6 +35,14 @@ class DynamicCNN(nn.Module):
             input_shape (Tuple[int, int, int]): The (RGB, H, W) shape of input images.
         """
         super(DynamicCNN, self).__init__()
+        # Assign hyperparams
+        self.n_layers = n_layers
+        self.n_filters = n_filters
+        self.kernel_sizes = kernel_sizes
+        self.dropout_rate = dropout_rate
+        self.fc_size = fc_size
+        self.num_classes = num_classes
+        self.input_shape = input_shape
         
         # Initialize convolutional blocks
         blocks = []
@@ -40,8 +50,8 @@ class DynamicCNN(nn.Module):
         
         for i in range(n_layers):
             # Get params for curr layer
-            out_channels = n_filters[i]
-            kernel_size = kernel_sizes[i]
+            out_channels = self.n_filters[i]
+            kernel_size = self.kernel_sizes[i]
             # Calculate padding to maintain the input spatial dimensions 
             padding = (kernel_size - 1) // 2
             # Define conv block architecture
@@ -60,16 +70,13 @@ class DynamicCNN(nn.Module):
         # Combine all blocks into a single feature extractor module
         self.features = nn.Sequential(*blocks)
         
-        self.dropout_rate = dropout_rate
-        self.fc_size = fc_size
-        self.num_classes = num_classes
-        
-        # Calc flattened size dynamically
+         # Calc flattened size dynamically
         with torch.no_grad():
             # Create a fake image and pass it through the features only
             dummy_input = torch.zeros(1, *input_shape)
             dummy_output = self.features(dummy_input)
             flattened_size = int(dummy_output.numel())
+        
        
         self.classifier = nn.Sequential(
             nn.Dropout(p=dropout_rate),
@@ -89,11 +96,73 @@ class DynamicCNN(nn.Module):
         Returns:
             torch.Tensor: The output logits of shape (batch_size, num_classes).
         """
-        # Pass input through feature extraction layers
         x = self.features(x)
-        
         # Flatten all dims except batch size to pass into fully connected model
-        flattened = torch.flatten(x, start_dim=1)
-            
+        x = torch.flatten(x, start_dim=1)
         # Pass flattened layers through classifier for final output  
-        return self.classifier(flattened)
+        x = self.classifier(x)
+        
+        return x
+    
+    def __repr__(self):
+        """
+        Returns a string representation of the model configuration.
+        """
+       # Calculate parameter counts and bytes 
+        trainable_params = 0
+        param_bytes = 0
+        total_params = 0
+
+        for p in self.parameters():
+            n = p.numel()
+            total_params += n
+            param_bytes += n * p.element_size()
+            if p.requires_grad:
+                trainable_params += n
+
+        # Calculate buffer counts and bytes
+        buffer_params = sum(b.numel() for b in self.buffers())
+        buffer_bytes = sum(b.numel() * b.element_size() for b in self.buffers())
+
+        # Derived metrics
+        frozen_params = total_params - trainable_params
+        model_size = (param_bytes + buffer_bytes) / (1024**2)
+
+        repr_str = (
+            f"DynamicCNN(\n"
+            f"  (Architecture): {self.n_layers} Convolutional Layers\n"
+            f"  (Initial Filters): {self.n_filters}\n"
+            f"  (FC Layer Size): {self.fc_size}\n"
+            f"  (Dropout Rate): {self.dropout_rate:2%}\n"
+            f"  (Num Classes): {len(self.fc[-1].bias) if hasattr(self, 'fc') else 'Unknown'}\n"
+            f"  (Trainable Params): {trainable_params:,}\n"
+            f"  (Frozen/Non-grad Params): {frozen_params:,}\n"
+            f"  (BatchNorm Buffers): {buffer_params:,}\n"
+            f"  (Total Parameters): {total_params:,}\n"
+            f"  (Trainable Parameters): {trainable_params:,}\n"
+            f"  (Grand Total): {total_params + buffer_params:,}\n"
+            f"  (Model Size): {model_size:.2f}MB"
+            f")"
+        )
+        return repr_str
+    
+    def draw_CNN(self, input_size=(1, 3, 224, 224), save_path="assets/model_architecture"):
+        """
+        Generates a clean, visual graph of the DynamicCNN architecture.
+        """
+        # Ensure the directory exists
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        
+        # Generate the graph
+        model_graph = draw_graph(
+            self, 
+            input_size=input_size,
+            expand_nested=True,
+            graph_name="DynamicCNN",
+            depth=3  # Adjust depth to see more/fewer sub-layers
+        )
+        
+        # Render to file
+        model_graph.visual_graph.render(save_path, format="png")
+        
+        return model_graph.visual_graph

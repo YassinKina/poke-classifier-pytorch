@@ -162,7 +162,8 @@ def train_model(model: torch.nn.Module,
         
         scheduler.step(val_loss)
         
-        status_msg = f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} Train Acc: {top1_train_acc:.2%} Train Top 5 Acc: {top5_train_acc:.2%} | Val Loss: {val_loss:.4f} Val Acc: {top1_val_acc:.2%} Val Top 5 Acc: {top5_val_acc:.2%} "
+        status_msg = f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} Train Acc: {top1_train_acc:.2%} Train Top 5 Acc: {top5_train_acc:.2%} | "\
+                                        f" Val Loss: {val_loss:.4f} Val Acc: {top1_val_acc:.2%} Val Top 5 Acc: {top5_val_acc:.2%} "
         pbar.maybe_log_epoch(epoch + 1, message=status_msg)
         
         current_lr = optimizer.param_groups[0]['lr']
@@ -208,6 +209,7 @@ def train_model(model: torch.nn.Module,
         wandb_run.finish()
         
     return best_val_acc
+
 
 @torch.no_grad()
 def test_model(model: torch.nn.Module, 

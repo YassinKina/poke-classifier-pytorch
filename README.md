@@ -7,9 +7,13 @@ A high-performance deep learning pipeline designed to classify the original 150 
 [Image of a convolutional neural network architecture for image classification]
 
 
+## 🌐 Live Demo
+**Check out the interactive web app here:** [Your Streamlit Link Here]
+*Upload your own Pokémon image or choose from a curated sample gallery to see the model's Top-5 predictions in real-time.*
+
 ## 📊 Performance Summary
 * **Top-1 Accuracy:** `67.86%` (Exact species match)
-* **Top-5 Accuracy:** `89.40%` (Correct species in the top 5 candidates)
+* **Top-5 Accuracy:** `89.40%` (Correct species in top 5 candidates)
 * **Optimization:** 20-trial study using Bayesian TPE Sampling and Median Pruning.
 
 ---
@@ -18,39 +22,47 @@ A high-performance deep learning pipeline designed to classify the original 150 
 
 ### 1. Dynamic Architecture
 The `DynamicCNN` is a flexible PyTorch implementation that adapts to configuration-driven depth and width:
-- **Variable Depth:** Supports dynamic `n_layers` configuration.
-- **Adaptive Width:** Adjusts `n_filters` and `fc_size` based on HPO suggestions.
-- **Regularization:** Integrated Dropout, Batch Normalization, and Weight Decay.
+- **Variable Depth:** Supports dynamic `n_layers` configuration via Hydra.
+- **Adaptive Width:** Adjusts `n_filters` and `fc_size` based on Optuna suggestions.
+- **Regularization:** Integrated Dropout, Batch Normalization, and Weight Decay to combat overfitting on a domain-specific dataset.
 
 ### 2. Automated HPO Workflow
 Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dimensional search space:
-- **Optimizer Params:** Learning Rate ($1^{-5}$ to $1^{-4}$), Weight Decay ($1^{-6}$ to $1^{-2}$).
-- **Regularization:** Dropout rates and Label Smoothing (up to 0.2).
-- **Architecture:** Layer counts and fully-connected layer dimensions.
-- **Early Stopping:** `MedianPruner` terminates underperforming trials to optimize compute resources.
+- **Optimizer Params:** Learning Rate ($10^{-5}$ to $10^{-3}$), Weight Decay ($10^{-6}$ to $10^{-4}$).
+- **Regularization:** Adaptive Dropout rates and Label Smoothing (up to $0.2$).
+- **Early Stopping:** `MedianPruner` terminates underperforming trials early to optimize compute resources.
 
 
 
 ### 3. Professional Experiment Tracking
-- **Weights & Biases:** Real-time logging of training/validation loss, Top-1 accuracy, Top-5 accuracy, and learning rate curves.
+- **Weights & Biases (W&B):** Real-time logging of training/validation loss, Top-1/Top-5 accuracy, and gradient distributions.
 - **Hydra:** Version-controlled configuration management for reproducible experiments.
 
 ---
 
 ## 📁 Project Structure
 ```text
-.
-├── config/             # Hydra YAML configurations (hpo vs. train)
+
+├── app.py              # Interactive Streamlit Web Application
+├── train.py            # Main training script for single-run execution
+├── hpo.py              # Optuna optimization entry point (Bayesian Search)
+├── eval.py             # Script for final test-set evaluation & metrics
+├── predict.py          # CLI tool for single-image inference
+├── config/             # Hydra YAML configurations
+│   ├── config.yaml     # Default training settings
+│   └── hpo/            # Optuna-specific search space configurations
 ├── data/               # Pokémon dataset (Cleaned & Preprocessed)
-├── models/             # Saved checkpoints (state_dicts + metadata)
-├── src/
-│   ├── dataset.py      # Custom Dataset with Pokemon-specific stats
-│   ├── model.py        # DynamicCNN architecture
-│   ├── engine.py       # Training, Val, and Top-K Eval logic
-│   └── utils.py        # Stats calculation and W&B initialization
-├── hpo.py              # Optuna optimization entry point
-├── eval.py             # Script for final test-set evaluation
-└── predict.py          # CLI tool for single-image inference 
+├── models/             # Saved checkpoints (.pth files + training metadata)
+├── notebooks/          # Jupyter notebooks for EDA and prototyping
+├── samples/            # Curated images for Streamlit demo testing
+├── src/                # Modular source code package
+│   ├── __init__.py     # Makes src a Python package
+│   ├── dataset.py      # Custom PyTorch Dataset class
+│   ├── data_setup.py   # DataLoaders and preprocessing pipelines
+│   ├── model.py        # DynamicCNN architecture definition
+│   ├── engine.py       # Core Train/Val/Top-K Evaluation loops
+│   └── utils.py        # Logging, W&B setup, and stat calculations
+└── requirements.txt    # Project dependencies
 ```
 
 ## 🚀 Getting Started
