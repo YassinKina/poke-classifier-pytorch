@@ -3,7 +3,9 @@ import torch
 import os
 from PIL import Image
 import yaml
-from src import DynamicCNN, get_train_test_transforms, get_mean_and_std, get_list_labels
+from src.model import DynamicCNN
+from src.data_setup import get_train_test_transforms, get_mean_and_std
+from src. utils import get_list_labels
 
 # --- CONFIGURATION ---
 MODEL_PATH = "models/pokemon_cnn_best.pth"
