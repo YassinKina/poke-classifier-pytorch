@@ -3,6 +3,7 @@ torch
 torchvision
 torchinfo
 torchview
+datasets
 
 # Configuration & Optimization
 hydra-core==1.3.2
