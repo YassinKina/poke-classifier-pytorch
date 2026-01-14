@@ -37,7 +37,8 @@ matplotlib
 tqdm
 pillow
 numpy
-datasets
+pyarrow==15.0.0
+datasets==2.18.0
 imagededup
 imagehash
 pyyaml
