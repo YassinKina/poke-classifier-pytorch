@@ -129,10 +129,12 @@ This project uses custom-calculated channel-wise statistics to account for the u
 
 
 ## Data Limitaions
-Very few training data were pictures of pokemon cards. As a result, the model struggles to correctly classify
-the input when given a pokemon card image. More generally, the about of training images in the cakyon___pokemon-classification
-dataset were less than 5,000, as I used a pretrained CNN to remove any augmented images in the initial dataset; 
-I did this to establish a clean, base dataset which I then augmented myself.
+* Very few training data were pictures of pokemon cards. As a result, the model struggles to correctly classify
+the input when given a pokemon card image.
+* Inequality in the representation of some labels
+* The training images in the cakyon___pokemon-classification
+dataset were less than 5,000, as I used a pretrained CNN to remove any augmented images in the initial dataset
+
 
 ## In Progress
 * In depth data, results, and hyperparameter analysis
