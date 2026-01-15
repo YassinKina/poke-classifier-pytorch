@@ -9,6 +9,8 @@ The model is a **Dynamic Convolutional Neural Network** consisting of four seque
 <details>
 <summary>🔍 Click to view detailed layer-by-layer summary</summary>
 
+<br>
+
 ```text
 ==========================================================================================
 Layer (type:depth-idx)                   Output Shape              Param #
@@ -42,7 +44,6 @@ Estimated Total Size (MB): 256.48
 ==========================================================================================
 
 </details>
-
 
 
 ## 🌐 Live Demo
