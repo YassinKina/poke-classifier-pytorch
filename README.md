@@ -48,7 +48,7 @@ Estimated Total Size (MB): 256.48
 
 
 ## 🌐 Live Demo
-**Check out the interactive web app here:** <a href="https://poke-classifier-pytorch.streamlit.app/" target="_blank" rel="noopener noreferrer">Check out the interactive web app here!</a>
+<a href="https://poke-classifier-pytorch.streamlit.app/" target="_blank" rel="noopener noreferrer">Check out the interactive web app here!</a>
 
 *Upload your own Pokémon image or choose from a curated sample gallery to see the model's Top-5 predictions in real-time.*
 
